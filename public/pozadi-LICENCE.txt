@@ -1,0 +1,11 @@
+Pozadí aplikace
+===============
+pozadi.webp, pozadi-mobil.webp
+
+Zdroj:  Unsplash — https://unsplash.com/photos/bokeh-lights-GivWtOgGyAY
+Autor:  Osman Rana
+Licence: Unsplash License — volné použití včetně komerčního,
+         bez povinnosti uvádět autora.
+         https://unsplash.com/license
+
+Upraveno: zmenšeno, převedeno do WebP, pro mobil výřez na výšku.
