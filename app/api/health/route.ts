@@ -15,8 +15,21 @@ export async function GET() {
     // Jen kód chyby (`28P01`, `ENOTFOUND`, `ERR_INVALID_URL`…), ne zprávu —
     // ta může obsahovat adresu serveru. Kód stačí, aby se po deployi dalo
     // poznat, co je špatně, bez lovení v logu Vercelu.
-    const kod =
-      error instanceof Error ? ((error as Error & { code?: string }).code ?? error.name) : "neznámá";
-    return Response.json({ ok: false, detail: "databáze neodpovídá", kod }, { status: 503 });
+    return Response.json(
+      { ok: false, detail: "databáze neodpovídá", kod: kodChyby(error) },
+      { status: 503 },
+    );
   }
+}
+
+/**
+ * Drizzle chyby databáze balí do obecného `Error` („Failed query…“) a pravý
+ * kód je až v `cause` — proto se jde řetězem dolů k prvnímu `code`.
+ */
+function kodChyby(error: unknown): string {
+  for (let e = error, hloubka = 0; e instanceof Error && hloubka < 5; e = e.cause, hloubka++) {
+    const code = (e as Error & { code?: unknown }).code;
+    if (typeof code === "string") return code;
+  }
+  return error instanceof Error ? error.name : "neznámá";
 }
