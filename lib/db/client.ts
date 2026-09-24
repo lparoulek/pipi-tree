@@ -32,9 +32,34 @@ function connect(): PostgresJsDatabase<typeof schema> {
     );
   }
 
+  if (isTransactionPooler(url)) {
+    // Radši hned hlasitá chyba než stránky, které donekonečna načítají.
+    throw new TransactionPoolerError();
+  }
+
   const client = postgres(url, { prepare: false, max: POOL_SIZE, idle_timeout: 20 });
   cached = drizzle(client, { schema });
   return cached;
+}
+
+/** Supabase transaction pooler — na něm postgres.js zamrzá, viz výše. */
+function isTransactionPooler(url: string): boolean {
+  try {
+    const { hostname, port } = new URL(url);
+    return hostname.endsWith(".pooler.supabase.com") && port === "6543";
+  } catch {
+    return false; // Neplatnou adresu nechme ohlásit samotný postgres.js.
+  }
+}
+
+export class TransactionPoolerError extends Error {
+  readonly code = "TRANSACTION_POOLER";
+  constructor() {
+    super(
+      "DATABASE_URL míří na Supabase transaction pooler (port 6543), na kterém aplikace zamrzá. " +
+        "Použij session pooler: stejná adresa s portem 5432.",
+    );
+  }
 }
 
 /** Proxy, aby se spojení otevřelo teprve při prvním skutečném dotazu. */
