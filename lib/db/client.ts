@@ -7,9 +7,15 @@ import * as schema from "./schema";
  * bolestně nabytých pravidel:
  *
  *   - Inicializace je líná, aby `next build` nepadal, když není DATABASE_URL.
- *   - `prepare: false` je u Supabase transaction pooleru (port 6543) povinné —
- *     pooler prepared statements nepodporuje.
- *   - Malý pool, protože serverless funkce se množí a pooler má limit.
+ *   - **Session pooler (port 5432), ne transaction pooler (6543).** postgres.js
+ *     posílá souběžné dotazy jedním spojením za sebou bez čekání (pipelining)
+ *     a transaction pooler (Supavisor) na tom natrvalo zamrzne — stačí
+ *     `Promise.all` tří dotazů na už použitém spojení. Ověřeno: 6543 visí,
+ *     5432 projde i `npm run kontrola`. V administraci se to projevilo tak,
+ *     že po resetu stránka donekonečna načítala.
+ *   - `prepare: false` zůstává, aby šlo kdykoli přejít na pooler bez
+ *     prepared statements.
+ *   - Malý pool, protože serverless funkce se množí a pooler má limit spojení.
  */
 
 const POOL_SIZE = 3;

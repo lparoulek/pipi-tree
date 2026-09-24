@@ -49,6 +49,8 @@ obdarovaného.
 7. **Losování je sériové.** Běží v transakci pod `pg_advisory_xact_lock`, takže
    souběžní losující si nemohou vzít téhož obdarovaného. Zámek musí zůstat
    *xact* (nikoli session) — jinak nefunguje s transaction poolerem Supabase.
+   Aplikace sama jede přes **session pooler (5432)**: na transaction pooleru
+   (6543) postgres.js zamrzá při souběžných dotazech (viz `lib/db/client.ts`).
 8. **Animace losování je pro všechny stejná.** I poslední člověk, kterému zbývá
    jediná možnost, vidí celý mlýnek se všemi jmény a stejně dlouhý. Válec
    nesmí točit jen zbývající lidi — z toho by se dal odhadnout stav hry.
