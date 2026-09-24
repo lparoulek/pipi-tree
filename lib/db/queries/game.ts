@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { draws, participants } from "@/lib/db/schema";
 import { drawReceiver } from "@/lib/game/draw";
+import { auditDraws, type Audit } from "@/lib/game/audit";
 import { parseParticipantLines } from "@/lib/game/groups";
 import { giftLetter } from "@/lib/game/letters";
 import { randomInt } from "@/lib/game/random";
@@ -272,6 +273,18 @@ export async function replaceParticipants(
           : ""),
     };
   });
+}
+
+/**
+ * Zpětná kontrola losů pro administraci. Vrací jen popisky a ano/ne —
+ * páry z databáze se čtou, ale ven se nepouští (viz `lib/game/audit.ts`).
+ */
+export async function auditCurrentDraws(): Promise<Audit> {
+  const [people, rows] = await Promise.all([
+    db.select({ id: participants.id, groupKey: participants.groupKey }).from(participants),
+    db.select({ giverId: draws.giverId, receiverId: draws.receiverId }).from(draws),
+  ]);
+  return auditDraws(people, rows);
 }
 
 /** Smaže všechny losy (seznam lidí zůstane). Losuje se znova od nuly. */

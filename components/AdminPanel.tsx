@@ -7,6 +7,7 @@ import {
   type AdminState,
 } from "@/app/actions";
 import CandyButton from "@/components/CandyButton";
+import type { Audit } from "@/lib/game/audit";
 
 /**
  * Administrace pro organizátora: zadání pevného seznamu lidí a reset hry.
@@ -18,12 +19,15 @@ export default function AdminPanel({
   lines,
   progress,
   locked,
+  audit,
 }: {
   /** Řádky seznamu — pár nebo domácnost na jednom řádku, jména oddělená „+“. */
   lines: string[];
   progress: { total: number; drawn: number };
   /** Už se losuje → seznam se nesmí měnit, jinak by se párování rozpadlo. */
   locked: boolean;
+  /** Zpětná kontrola losů — jen ano/ne, žádná jména. */
+  audit: Audit;
 }) {
   const [saveState, save, saving] = useActionState<AdminState, FormData>(
     saveParticipantsAction,
@@ -50,6 +54,8 @@ export default function AdminPanel({
           </p>
         )}
       </Card>
+
+      {progress.drawn > 0 && <Kontrola audit={audit} />}
 
       <Card title="Seznam lidí">
         {locked ? (
@@ -142,6 +148,37 @@ function SeznamForm({
         {saving ? "Ukládám…" : "Uložit seznam"}
       </CandyButton>
     </form>
+  );
+}
+
+/**
+ * Kontrola losování. Počítá se na serveru při každém otevření administrace,
+ * takže ji organizátor nemusí spouštět ani losy procházet ručně — a kvůli
+ * překvapení ani nesmí. Ukazuje jen, *že* je něco špatně, nikdy u koho.
+ */
+function Kontrola({ audit }: { audit: Audit }) {
+  const ok = audit.checks.every((c) => c.ok);
+  return (
+    <Card title="Kontrola losování">
+      <p className={`text-lg font-bold ${ok ? "text-pine" : "text-holly"}`}>
+        {ok
+          ? audit.complete
+            ? "✅ Losování je hotové a v pořádku."
+            : "✅ Zatím je všechno v pořádku."
+          : "❌ Něco nesedí — ozvi se tomu, kdo aplikaci spravuje."}
+      </p>
+      <ul className="mt-3 space-y-1 text-cream/90">
+        {audit.checks.map((c) => (
+          <li key={c.label}>
+            {c.ok ? "✅" : "❌"} {c.label}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-sm text-cream/70">
+        Kontroluje se při každém otevření administrace. Páry se ani tady
+        nezobrazují.
+      </p>
+    </Card>
   );
 }
 

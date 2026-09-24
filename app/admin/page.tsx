@@ -1,7 +1,8 @@
 import Link from "next/link";
 import AdminPanel from "@/components/AdminPanel";
 import { isDatabaseConfigured } from "@/lib/db/client";
-import { hasAnyDraw, listGroups, progress } from "@/lib/db/queries/game";
+import { auditCurrentDraws, hasAnyDraw, listGroups, progress } from "@/lib/db/queries/game";
+import type { Audit } from "@/lib/game/audit";
 import { formatParticipantLines } from "@/lib/game/groups";
 
 /** Stav hry se mění losováním, takže žádná cache. */
@@ -31,19 +32,22 @@ export default async function AdminPage() {
     lines: string[];
     stats: { total: number; drawn: number };
     locked: boolean;
+    audit: Audit;
   };
 
   try {
-    const [groups, stats, started] = await Promise.all([
+    const [groups, stats, started, audit] = await Promise.all([
       listGroups(),
       progress(),
       hasAnyDraw(),
+      auditCurrentDraws(),
     ]);
 
     data = {
       lines: formatParticipantLines(groups),
       stats,
       locked: started,
+      audit,
     };
   } catch (error) {
     console.error("[admin] nepodařilo se načíst stav", error);
@@ -63,6 +67,7 @@ export default async function AdminPage() {
         lines={data.lines}
         progress={data.stats}
         locked={data.locked}
+        audit={data.audit}
       />
     </Shell>
   );

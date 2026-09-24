@@ -72,6 +72,9 @@ porovnání s hrubou silou a simulace celých her.
   náhodné losování uváznout (poslednímu zbyde partner) — test to dokazuje.
 - `lib/game/groups.ts` — řádky z administrace na skupiny a kontrola, že
   seznam jde rozlosovat (žádná skupina nesmí mít víc než polovinu lidí).
+- `lib/game/audit.ts` — zpětná kontrola losů v administraci. Ukazuje jen
+  ano/ne u každého pravidla, **nikdy jména ani u koho** — organizátor si
+  chce nechat překvapení.
 - `lib/game/letters.ts` — první písmeno jména česky (diakritika, digraf „Ch“).
   Platí **přesně to jedno písmeno**: „Štěpán“ → jen Š, ne i S. Tolerance na
   písmeno bez háčku tam kdysi byla a byla odstraněna záměrně — nevracet.
