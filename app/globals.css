@@ -18,6 +18,17 @@
   --color-plum: #b14aed;
   --color-cream: #fff8e7;
 
+  /* Papírová krajina v pozadí. Vzdálenější vrstvy jsou světlejší a do fialova
+     (vzduch), blíž je sníh jasnější a jehličí tmavší. */
+  --color-paper-far: #6c3a9e;
+  --color-paper-hill: #9d78cc;
+  --color-paper-snow: #d9c9ee;
+  --color-paper-drift: #efe6f8;
+  --color-paper-pine: #0a5a30;
+  --color-paper-wall: #d38a52;
+  --color-paper-edge: rgb(255 255 255 / 0.35);
+  --color-paper-shade: rgb(24 4 40 / 0.5);
+
   --font-display: var(--font-lobster);
   --font-sans: var(--font-baloo);
 }
@@ -50,6 +61,48 @@ body {
     var(--color-holly) 0 12px,
     var(--color-cream) 12px 24px
   );
+}
+
+/* --- Papírové pozadí ----------------------------------------------------- */
+
+/**
+ * Tloušťka papíru: tenká světlá hrana nahoře a stín na vrstvu za ní.
+ * Hloubku nastavuje `--stin` (bližší vrstva = delší stín). Vrstvy jsou
+ * statické, takže se filtr spočítá jednou a sníh přes ně nic nestojí.
+ */
+.papir {
+  filter:
+    drop-shadow(0 -1px 0 var(--color-paper-edge))
+    drop-shadow(0 calc(var(--stin, 4) * 1px) calc(var(--stin, 4) * 2px) var(--color-paper-shade));
+}
+
+.papir-mesic {
+  filter:
+    drop-shadow(0 0 28px color-mix(in srgb, var(--color-cream) 45%, transparent))
+    drop-shadow(0 4px 6px var(--color-paper-shade));
+}
+
+/**
+ * Paralaxa: `--px`/`--py` (−1 až 1) zapisuje `PaperParallax` podle myši,
+ * `--hloubka` je největší posun vrstvy v pixelech. Svisle jen napůl — nahoru
+ * a dolů se toho při pohledu do betléma hýbe méně.
+ *
+ * `will-change` drží každou vrstvu na vlastní kompozitní vrstvě: stín
+ * z `.papir` se spočítá jednou a při pohybu se jen posouvá hotový obrázek.
+ */
+.papir-vrstva {
+  transform: translate3d(
+    calc(var(--px, 0) * var(--hloubka, 0) * -1px),
+    calc(var(--py, 0) * var(--hloubka, 0) * -0.5px),
+    0
+  );
+  will-change: transform;
+}
+
+/* Zrno papíru. `soft-light` ho nechá jen zdrsnit barvy, ne zašednout. */
+.papir-zrno {
+  opacity: 0.28;
+  mix-blend-mode: soft-light;
 }
 
 /* --- Tlačítka ------------------------------------------------------------- */
@@ -259,6 +312,16 @@ body {
   }
 }
 
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
 @keyframes wobble {
   0%,
   100% {
@@ -306,6 +369,7 @@ body {
 /* `both` drží prvek na hodnotách z 0 % i během zpoždění — bez toho se během
    něj vykresluje nezanimovaný stav a vločky i konfety staticky leží nahoře. */
 .anim-snow { animation: snowfall linear infinite both; }
+.anim-twinkle { animation: twinkle ease-in-out infinite both; }
 .anim-wobble { animation: wobble 3s ease-in-out infinite; }
 .anim-pop { animation: pop-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .anim-confetti { animation: confetti-fall linear both; }
@@ -317,6 +381,7 @@ body {
  */
 @media (prefers-reduced-motion: reduce) {
   .anim-snow,
+  .anim-twinkle,
   .anim-wobble,
   .anim-pop,
   .anim-confetti,
