@@ -1,7 +1,8 @@
 import Link from "next/link";
 import AdminPanel from "@/components/AdminPanel";
 import { isDatabaseConfigured } from "@/lib/db/client";
-import { hasAnyDraw, listParticipants, progress } from "@/lib/db/queries/game";
+import { hasAnyDraw, listGroups, progress } from "@/lib/db/queries/game";
+import { formatParticipantLines } from "@/lib/game/groups";
 
 /** Stav hry se mění losováním, takže žádná cache. */
 export const dynamic = "force-dynamic";
@@ -27,20 +28,20 @@ export default async function AdminPage() {
   // JSX se staví až za try/catch — chyby při renderu by se do něj nezachytily
   // (a ESLint na to správně upozorňuje). Tady hlídáme jen dotazy do databáze.
   let data: {
-    names: string[];
+    lines: string[];
     stats: { total: number; drawn: number };
     locked: boolean;
   };
 
   try {
-    const [people, stats, started] = await Promise.all([
-      listParticipants(),
+    const [groups, stats, started] = await Promise.all([
+      listGroups(),
       progress(),
       hasAnyDraw(),
     ]);
 
     data = {
-      names: people.map((p) => p.name),
+      lines: formatParticipantLines(groups),
       stats,
       locked: started,
     };
@@ -59,7 +60,7 @@ export default async function AdminPage() {
   return (
     <Shell>
       <AdminPanel
-        names={data.names}
+        lines={data.lines}
         progress={data.stats}
         locked={data.locked}
       />

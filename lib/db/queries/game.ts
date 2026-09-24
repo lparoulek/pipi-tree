@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { draws, participants } from "@/lib/db/schema";
 import { drawReceiver } from "@/lib/game/draw";
+import { parseParticipantLines } from "@/lib/game/groups";
 import { giftLetter } from "@/lib/game/letters";
 import { randomInt } from "@/lib/game/random";
 import { assignSlugs, toSlugFromUrl } from "@/lib/game/slug";
@@ -112,9 +113,10 @@ export async function performDraw(giverId: string): Promise<DrawOutcome> {
     await tx.execute(sql`select pg_advisory_xact_lock(${DRAW_LOCK_KEY})`);
 
     const people = await tx
-      .select({ id: participants.id, name: participants.name })
+      .select({ id: participants.id, name: participants.name, groupKey: participants.groupKey })
       .from(participants)
       .orderBy(participants.sortOrder);
+    const groupOf = new Map(people.map((p) => [p.id, p.groupKey]));
 
 
     // Pod dva lidi nemá derangement řešení (jeden by daroval sám sobě).
@@ -137,6 +139,7 @@ export async function performDraw(giverId: string): Promise<DrawOutcome> {
       {
         remainingGivers: people.filter((p) => !drawnGivers.has(p.id)).map((p) => p.id),
         remainingReceivers: people.filter((p) => !takenReceivers.has(p.id)).map((p) => p.id),
+        groupOf,
       },
       randomInt,
     );
@@ -146,6 +149,9 @@ export async function performDraw(giverId: string): Promise<DrawOutcome> {
     await tx.insert(draws).values({
       giverId,
       receiverId,
+      // Opsané skupiny hlídá databáze (`draws_not_same_group` + cizí klíče).
+      giverGroup: groupOf.get(giverId)!,
+      receiverGroup: groupOf.get(receiverId)!,
       drawnAt: new Date().toISOString(),
     });
 
@@ -196,24 +202,35 @@ export async function progress(): Promise<{ total: number; drawn: number }> {
 }
 
 /**
+ * Seznam lidí po skupinách (pár, domácnost), v pořadí zadání. Pro
+ * administraci — ta ho vrací do textového pole jako řádky s „+“.
+ */
+export async function listGroups(): Promise<string[][]> {
+  const rows = await db
+    .select({ name: participants.name, groupKey: participants.groupKey })
+    .from(participants)
+    .orderBy(participants.sortOrder);
+
+  const byGroup = new Map<string, string[]>();
+  for (const { name, groupKey } of rows) {
+    byGroup.set(groupKey, [...(byGroup.get(groupKey) ?? []), name]);
+  }
+  return [...byGroup.values()];
+}
+
+/**
  * Nahradí seznam lidí. Jen dokud se nezačalo losovat — pak by se párování
- * rozsypalo. Maže i staré losy, protože jiná jména = jiná hra.
+ * rozsypalo.
+ *
+ * Vstup jsou řádky z administrace: řádek = skupina, jména v ní oddělená „+“
+ * (viz `lib/game/groups.ts`). Seznam, který nejde rozlosovat, se neuloží.
  */
 export async function replaceParticipants(
-  names: readonly string[],
+  lines: readonly string[],
 ): Promise<{ ok: boolean; detail: string }> {
-  const cleaned = Array.from(
-    new Map(
-      names
-        .map((n) => n.trim().replace(/\s+/g, " "))
-        .filter((n) => n.length > 0)
-        .map((n) => [n.toLocaleLowerCase("cs-CZ"), n]),
-    ).values(),
-  );
-
-  if (cleaned.length < 2) {
-    return { ok: false, detail: "Potřebuju aspoň dva lidi, jinak není co losovat." };
-  }
+  const parsed = parseParticipantLines(lines);
+  if (!parsed.ok) return parsed;
+  const { groups } = parsed;
 
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${DRAW_LOCK_KEY})`);
@@ -226,19 +243,34 @@ export async function replaceParticipants(
       };
     }
 
+    const people = groups.flatMap((group) => {
+      const groupKey = randomUUID();
+      return group.map((name) => ({ name, groupKey }));
+    });
+    const slugs = assignSlugs(people.map((p) => p.name));
+
     await tx.delete(participants);
     const now = new Date().toISOString();
     await tx.insert(participants).values(
-      assignSlugs(cleaned).map(({ name, slug }, i) => ({
+      people.map(({ name, groupKey }, i) => ({
         id: randomUUID(),
         name,
-        slug,
+        slug: slugs[i].slug,
+        groupKey,
         sortOrder: i,
         createdAt: now,
       })),
     );
 
-    return { ok: true, detail: `Seznam uložen — ${cleaned.length} lidí.` };
+    const skupiny = groups.filter((g) => g.length > 1);
+    return {
+      ok: true,
+      detail:
+        `Seznam uložen — ${people.length} lidí.` +
+        (skupiny.length > 0
+          ? ` Navzájem se nevylosují: ${skupiny.map((g) => g.join(" + ")).join(", ")}.`
+          : ""),
+    };
   });
 }
 

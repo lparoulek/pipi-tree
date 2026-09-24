@@ -15,11 +15,12 @@ import CandyButton from "@/components/CandyButton";
  * dozvědět, kdo koho má — jinak by o překvapení přišel taky. Vidí jen počty.
  */
 export default function AdminPanel({
-  names,
+  lines,
   progress,
   locked,
 }: {
-  names: string[];
+  /** Řádky seznamu — pár nebo domácnost na jednom řádku, jména oddělená „+“. */
+  lines: string[];
   progress: { total: number; drawn: number };
   /** Už se losuje → seznam se nesmí měnit, jinak by se párování rozpadlo. */
   locked: boolean;
@@ -57,14 +58,14 @@ export default function AdminPanel({
               Už se losuje, takže seznam je zamčený. Změna jmen uprostřed losování by
               rozbila párování — nejdřív losování resetuj.
             </p>
-            <ul className="mt-3 grid grid-cols-2 gap-1 text-cream/90">
-              {names.map((name) => (
-                <li key={name}>• {name}</li>
+            <ul className="mt-3 space-y-1 text-cream/90">
+              {lines.map((line) => (
+                <li key={line}>• {line}</li>
               ))}
             </ul>
           </>
         ) : (
-          <SeznamForm key={names.join("\n")} names={names} save={save} saving={saving} />
+          <SeznamForm key={lines.join("\n")} lines={lines} save={save} saving={saving} />
         )}
         <Result state={saveState} />
       </Card>
@@ -99,30 +100,41 @@ export default function AdminPanel({
  * se formulář přes `key` založí znovu s uloženým, očištěným seznamem.
  */
 function SeznamForm({
-  names,
+  lines,
   save,
   saving,
 }: {
-  names: string[];
+  lines: string[];
   save: (formData: FormData) => void;
   saving: boolean;
 }) {
-  const [text, setText] = useState(names.join("\n"));
+  const [text, setText] = useState(lines.join("\n"));
 
   return (
     <form action={save} className="space-y-3">
-      <label htmlFor="names" className="block text-sm text-cream/80">
-        Jedno jméno na řádek, aspoň dva lidi. Piš <strong>jméno
-        i příjmení</strong> — v losu se zobrazí přesně to, co tu zadáš,
-        a podle samotného „Petra“ obdarovaný nepozná, o koho jde.
+      <div id="names-help" className="space-y-1.5 text-sm text-cream/80">
+        <p>
+          Jedno jméno na řádek, aspoň dva lidi. Piš <strong>jméno
+          i příjmení</strong> — v losu se zobrazí přesně to, co tu zadáš,
+          a podle samotného „Petra“ obdarovaný nepozná, o koho jde.
+        </p>
+        <p>
+          <strong>Pár nebo domácnost</strong> napiš na jeden řádek a jména
+          odděl <code className="rounded bg-night px-1 text-gold">+</code>.
+          Navzájem se nevylosují.
+        </p>
+      </div>
+      <label htmlFor="names" className="sr-only">
+        Seznam lidí
       </label>
       <textarea
         id="names"
         name="names"
         rows={10}
+        aria-describedby="names-help"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={"Jana\nPetr\nŠtěpán\nŽofie"}
+        placeholder={"Jana Nováková + Petr Novák\nŠtěpán Říha + Žofie Dvořáková\nCyril Bílek"}
         className="w-full rounded-xl border-2 border-gold/60 bg-night/70 p-3 font-mono text-cream
           placeholder:text-cream/40 focus:border-gold focus:outline-none"
       />

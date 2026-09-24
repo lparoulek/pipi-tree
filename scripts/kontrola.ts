@@ -13,8 +13,9 @@
  *   3. druhý los téhož dárce se odmítne, bez prozrazení
  *   4. souběh: všichni losují naráz → nikdy dva téhož obdarovaného
  *   5. souběh: tentýž člověk ve dvou kartách → uspěje právě jedna
+ *   a pořád: nikdo neobdaroval nikoho z vlastní skupiny (pár, domácnost)
  */
-import { getAssignment, listParticipants, performDraw, progress, resetDraws } from "@/lib/db/queries/game";
+import { getAssignment, listGroups, listParticipants, performDraw, progress, resetDraws } from "@/lib/db/queries/game";
 
 let fail = 0;
 const check = (label: string, ok: boolean, extra = "") => {
@@ -37,6 +38,13 @@ async function main() {
     process.exit(1);
   }
   const n = people.length;
+
+  // Jméno → skupina. Pro kontrolu „ne partnerovi“ v každém kole.
+  const groupOfName = new Map(
+    (await listGroups()).flatMap((g, i) => g.map((name) => [name, i] as const)),
+  );
+  const sameGroup = (giver: string, receiver: string) =>
+    groupOfName.get(giver) === groupOfName.get(receiver);
 
   // --- 1. Koncovka -------------------------------------------------------
   await resetDraws();
@@ -67,6 +75,10 @@ async function main() {
   check("všichni mají los", receivers.every(Boolean));
   check("žádný obdarovaný dvakrát", new Set(receivers).size === n, `${new Set(receivers).size}/${n}`);
   check("nikdo neobdarovává sám sebe", people.every((p, i) => receivers[i] !== p.name));
+  check(
+    "nikdo neobdarovává nikoho ze své skupiny",
+    people.every((p, i) => !sameGroup(p.name, receivers[i]!)),
+  );
 
   // --- 3. Jen jedno losování --------------------------------------------
   const again = await performDraw(people[0].id);
@@ -76,6 +88,7 @@ async function main() {
   // --- 4. Souběh: všichni naráz -----------------------------------------
   let badRounds = 0;
   let collisions = 0;
+  let inGroup = 0;
   const ROUNDS = 8;
   for (let round = 0; round < ROUNDS; round++) {
     await resetDraws();
@@ -83,9 +96,13 @@ async function main() {
     if (results.filter((r) => r.status === "ok").length !== n) badRounds++;
     const got = results.flatMap((r) => (r.status === "ok" ? [r.assignment.receiverName] : []));
     if (new Set(got).size !== got.length) collisions++;
+    results.forEach((r, i) => {
+      if (r.status === "ok" && sameGroup(people[i].name, r.assignment.receiverName)) inGroup++;
+    });
   }
   check(`${ROUNDS} kol × ${n} souběžných losů: vždy všichni uspěli`, badRounds === 0, `${badRounds} kol selhalo`);
   check("nikdy si dva nevylosovali téhož obdarovaného", collisions === 0, `${collisions} kolizí`);
+  check("ani v souběhu nikdo neobdaroval svou skupinu", inGroup === 0, `${inGroup} případů`);
 
   // --- 5. Souběh: tentýž člověk dvakrát ---------------------------------
   let doubles = 0;

@@ -10,11 +10,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { draws, participants } from "@/lib/db/schema";
-import { listParticipants, progress } from "@/lib/db/queries/game";
+import { listGroups, listParticipants, progress } from "@/lib/db/queries/game";
 import { giftLetter } from "@/lib/game/letters";
 
 async function main() {
-  const [people, stats] = await Promise.all([listParticipants(), progress()]);
+  const [people, groups, stats] = await Promise.all([listParticipants(), listGroups(), progress()]);
 
   if (people.length === 0) {
     console.log("Seznam je prázdný. Naplň ho: npm run seed");
@@ -24,6 +24,12 @@ async function main() {
   console.log("jméno            odkaz");
   console.log("─".repeat(38));
   for (const p of people) console.log(`${p.name.padEnd(16)} /${p.slug}`);
+
+  const skupiny = groups.filter((g) => g.length > 1);
+  if (skupiny.length > 0) {
+    console.log("\nnavzájem se nelosují:");
+    for (const g of skupiny) console.log(`  ${g.join(" + ")}`);
+  }
 
   console.log(`\nvylosováno: ${stats.drawn} z ${stats.total}`);
 

@@ -11,6 +11,8 @@ Drizzle ORM + Postgres (Supabase) · Vercel
 
 1. Organizátor zadá v `/admin` seznam lidí — **jméno i příjmení**, protože
    v losu se zobrazí přesně to, co zadá.
+   Pár nebo domácnost napíše na jeden řádek a jména oddělí „+“
+   (`Jan Novák + Jana Nováková`) — navzájem se nevylosují.
 2. Všichni si otevřou **jednu adresu** — každý u sebe doma, na svém telefonu.
    Je na ní odpočet do oslavy a seznam jmen: každý klikne na sebe a potvrdí,
    že je to opravdu on.
@@ -29,8 +31,8 @@ Odkaz zůstává platný, takže se k losu dá vrátit kdykoli a odkudkoli.
 
 ## Co hra garantuje
 
-Každý daruje i dostane právě jednou, nikdo nedaruje sám sobě a losování nikdy
-neuvázne — ani když všichni zmáčknou *Losovat!* ve stejný okamžik. Losuje se
+Každý daruje i dostane právě jednou, nikdo nedaruje sám sobě ani partnerovi
+či nikomu z vlastní domácnosti a losování nikdy neuvázne — ani když všichni zmáčknou *Losovat!* ve stejný okamžik. Losuje se
 v transakci pod advisory lockem, takže dva lidé nemohou dostat téhož
 obdarovaného, a kdyby logika selhala, odmítne to databáze.
 

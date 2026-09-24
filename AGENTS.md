@@ -15,7 +15,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Vánoční losování dárků. Pevný seznam lidí, každý si jednou vylosuje jednoho
 člověka, kterého obdaruje. Přiřazení je **permutace bez pevného bodu**
 (derangement): každý daruje právě jednou, každý dostane právě jeden dárek,
-nikdo nedaruje sám sobě. Dárek musí začínat na stejné písmeno jako jméno
+nikdo nedaruje sám sobě **ani nikomu z vlastní skupiny** (pár, domácnost —
+v administraci jeden řádek, jména oddělená „+“). Dárek musí začínat na stejné písmeno jako jméno
 obdarovaného.
 
 ## Nedotknutelná pravidla
@@ -42,7 +43,9 @@ obdarovaného.
    Vynucuje `replaceParticipants`.
 6. **Pravidla hry hlídá i schéma databáze**, ne jen kód: `draws.giver_id` je
    primární klíč (daruje se jednou), `draws.receiver_id` má unique index
-   (dostane se jednou) a omezení `draws_not_self` zakáže darovat sám sobě.
+   (dostane se jednou), omezení `draws_not_self` zakáže darovat sám sobě
+   a `draws_not_same_group` partnerovi. Skupiny se do losu opisují a složené
+   cizí klíče hlídají, že opsané souhlasí se seznamem lidí.
    Tohle se neodstraňuje — je to poslední záchytná síť. Ověřeno vynucením
    duplikátů přímo v SQL; to třetí omezení dřív chybělo a „daruji sám sobě“
    databáze klidně přijala.
@@ -65,6 +68,10 @@ porovnání s hrubou silou a simulace celých her.
 
 - `lib/game/draw.ts` — čistá logika losování včetně kontroly, že hra zůstane
   dokončitelná. Bez I/O, plně testovaná. **Tady se nesahá na nic bez testu.**
+  Dokončitelnost se počítá skutečným párováním, ne vzorcem: s páry může
+  náhodné losování uváznout (poslednímu zbyde partner) — test to dokazuje.
+- `lib/game/groups.ts` — řádky z administrace na skupiny a kontrola, že
+  seznam jde rozlosovat (žádná skupina nesmí mít víc než polovinu lidí).
 - `lib/game/letters.ts` — první písmeno jména česky (diakritika, digraf „Ch“).
   Platí **přesně to jedno písmeno**: „Štěpán“ → jen Š, ne i S. Tolerance na
   písmeno bez háčku tam kdysi byla a byla odstraněna záměrně — nevracet.

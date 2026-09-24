@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canStillFinish, drawReceiver, eligibleReceivers } from "@/lib/game/draw";
+import { canStillFinish, drawReceiver, eligibleReceivers, mayGive } from "@/lib/game/draw";
 
 /** Deterministická náhoda, ať jsou pády testů reprodukovatelné. */
 function mulberry32(seed: number): () => number {
@@ -209,5 +209,158 @@ describe("drawReceiver", () => {
       remainingReceivers: ["b", "c"],
     });
     expect(options).toEqual(["c"]);
+  });
+});
+
+/** Skupiny zapsané jako `[["a", "b"], ["c"]]` → mapa člověk → skupina. */
+function groups(...lists: string[][]): Map<string, string> {
+  return new Map(lists.flatMap((list, i) => list.map((p) => [p, `g${i}`] as const)));
+}
+
+function bruteForceWithGroups(
+  givers: readonly string[],
+  receivers: readonly string[],
+  groupOf: ReadonlyMap<string, string>,
+): boolean {
+  if (givers.length !== receivers.length) return false;
+  return permutations(receivers).some((order) =>
+    givers.every((g, i) => mayGive(g, order[i], groupOf)),
+  );
+}
+
+describe("páry a domácnosti", () => {
+  it("mayGive: ne sobě, ne partnerovi, jinak komukoli", () => {
+    const g = groups(["a", "b"], ["c"]);
+    expect(mayGive("a", "a", g)).toBe(false);
+    expect(mayGive("a", "b", g)).toBe(false);
+    expect(mayGive("b", "a", g)).toBe(false);
+    expect(mayGive("a", "c", g)).toBe(true);
+    expect(mayGive("c", "a", g)).toBe(true);
+    // Kdo ve skupinách není, je omezený jen sám sebou.
+    expect(mayGive("x", "a", g)).toBe(true);
+    expect(mayGive("a", "x", g)).toBe(true);
+    expect(mayGive("x", "x", g)).toBe(false);
+  });
+
+  it("canStillFinish souhlasí s hrubou silou na všech malých stavech i rozděleních do skupin", () => {
+    const pool = ["a", "b", "c", "d", "e"];
+    const subsets = (xs: string[]): string[][] =>
+      xs.reduce<string[][]>((acc, x) => [...acc, ...acc.map((s) => [...s, x])], [[]]);
+
+    // Každý člověk dostane jednu ze tří skupin → 3^5 rozdělení, včetně
+    // domácností o třech a „všichni v jedné skupině“.
+    let checked = 0;
+    for (let code = 0; code < 3 ** pool.length; code++) {
+      const groupOf = new Map(pool.map((p, i) => [p, `g${Math.floor(code / 3 ** i) % 3}`]));
+      for (const givers of subsets(pool)) {
+        for (const receivers of subsets(pool)) {
+          if (givers.length !== receivers.length) continue;
+          expect(
+            canStillFinish(givers, receivers, groupOf),
+            `dárci ${givers} příjemci ${receivers} skupiny ${[...groupOf]}`,
+          ).toBe(bruteForceWithGroups(givers, receivers, groupOf));
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(10000);
+  });
+
+  it("celý seznam jde rozlosovat, právě když žádná skupina nemá víc než polovinu lidí", () => {
+    const all = (g: Map<string, string>) => [...g.keys()];
+    const lze = (g: Map<string, string>) => canStillFinish(all(g), all(g), g);
+
+    expect(lze(groups(["a", "b"], ["c", "d"]))).toBe(true);
+    expect(lze(groups(["a", "b"], ["c", "d"], ["e", "f"]))).toBe(true);
+    expect(lze(groups(["a", "b", "c"], ["d", "e", "f"]))).toBe(true);
+    // Pár a jeden navíc: oba z páru by museli obdarovat toho třetího.
+    expect(lze(groups(["a", "b"], ["c"]))).toBe(false);
+    // Domácnost o třech ze čtyř lidí.
+    expect(lze(groups(["a", "b", "c"], ["d"]))).toBe(false);
+    // Jediný pár a nikdo jiný.
+    expect(lze(groups(["a", "b"]))).toBe(false);
+  });
+
+  it("koncovka: nenabídne volbu, po které by poslednímu zbyl jen partner", () => {
+    // `x` a `y` jsou pár. Losuje `a`, po něm zbývá `x`. Volní příjemci `c` a `y`.
+    // Kdyby si `a` vzal `c`, zbyl by na `x` jen jeho partner `y`.
+    const options = eligibleReceivers("a", {
+      remainingGivers: ["a", "x"],
+      remainingReceivers: ["c", "y"],
+      groupOf: groups(["x", "y"], ["a"], ["c"]),
+    });
+    expect(options).toEqual(["y"]);
+  });
+
+  it("partnera nikdy nenabídne, ani když by jinak byl jediná možnost", () => {
+    expect(
+      drawReceiver(
+        "x",
+        { remainingGivers: ["x"], remainingReceivers: ["y"], groupOf: groups(["x", "y"]) },
+        () => 0,
+      ),
+    ).toBeNull();
+  });
+
+  it("celé losování s páry vždy dojde do konce a nikdo neobdaruje partnera", () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const rng = mulberry32(seed);
+      const pick = randomIntFrom(rng);
+      const size = 4 + (seed % 9); // 4..12 lidí
+
+      // Náhodně spáruj, občas přidej domácnost o třech; zbytek jednotlivci.
+      const people = Array.from({ length: size }, (_, i) => `p${i}`).sort(() => rng() - 0.5);
+      const groupOf = new Map<string, string>();
+      let i = 0;
+      for (let g = 0; i < people.length; g++) {
+        const velikost = rng() < 0.6 ? 2 : rng() < 0.3 ? 3 : 1;
+        for (const p of people.slice(i, i + velikost)) groupOf.set(p, `g${g}`);
+        i += velikost;
+      }
+      // Neřešitelné rozdělení by se do losování nedostalo (odmítne ho uložení).
+      if (!canStillFinish(people, people, groupOf)) continue;
+
+      const order = [...people].sort(() => rng() - 0.5);
+      let remainingGivers = [...people];
+      let remainingReceivers = [...people];
+      const pairs = new Map<string, string>();
+
+      for (const giver of order) {
+        const receiver = drawReceiver(giver, { remainingGivers, remainingReceivers, groupOf }, pick);
+        expect(receiver, `seed ${seed}: ${giver} nemá koho losovat`).not.toBeNull();
+        pairs.set(giver, receiver!);
+        remainingGivers = remainingGivers.filter((g) => g !== giver);
+        remainingReceivers = remainingReceivers.filter((r) => r !== receiver);
+      }
+
+      expect(pairs.size).toBe(size);
+      expect(new Set(pairs.values()).size).toBe(size);
+      for (const [giver, receiver] of pairs) {
+        expect(mayGive(giver, receiver, groupOf), `seed ${seed}: ${giver} → ${receiver}`).toBe(true);
+      }
+    }
+  });
+
+  it("bez kontroly by losování s páry uvázlo — test hlídá, že kontrola je potřeba", () => {
+    // Naivní losování „kohokoli povoleného“ na stejných datech. Kdyby nikdy
+    // neuvázlo, byla by kontrola dokončitelnosti zbytečná a test výš by nic
+    // nedokazoval.
+    let uvazlo = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const rng = mulberry32(seed);
+      const people = ["a", "b", "c", "d", "e", "f"];
+      const groupOf = groups(["a", "b"], ["c", "d"], ["e", "f"]);
+      let receivers = [...people];
+      for (const giver of [...people].sort(() => rng() - 0.5)) {
+        const options = receivers.filter((r) => mayGive(giver, r, groupOf));
+        if (options.length === 0) {
+          uvazlo++;
+          break;
+        }
+        const r = options[Math.floor(rng() * options.length)];
+        receivers = receivers.filter((x) => x !== r);
+      }
+    }
+    expect(uvazlo).toBeGreaterThan(0);
   });
 });

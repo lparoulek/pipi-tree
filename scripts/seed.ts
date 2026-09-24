@@ -19,15 +19,14 @@ import { listParticipants, progress, replaceParticipants, resetDraws } from "@/l
  *   - Štěpán, Žofie, Řehoř → diakritika ve jménu i v písmenu dárku
  *   - Christián           → digraf „Ch“ je česky jedno písmeno
  *   - Cyril               → naopak samotné „C“ se na „Ch“ splést nesmí
+ *   - dva páry na řádku   → navzájem se vylosovat nesmí a losování přesto
+ *                           musí dojít do konce (i domácnost o třech)
  */
 const TESTOVACI_JMENA = [
   "Jan Novák",
-  "Petr Svoboda",
+  "Petr Svoboda + Žofie Dvořáková",
   "Petr Novotný",
-  "Štěpán Říha",
-  "Žofie Dvořáková",
-  "Christián Hájek",
-  "Cyril Bílek",
+  "Štěpán Říha + Christián Hájek + Cyril Bílek",
   "Řehoř Krátký",
 ];
 
@@ -58,7 +57,7 @@ async function main() {
   console.log("\njméno            odkaz");
   console.log("─".repeat(38));
   for (const p of people) console.log(`${p.name.padEnd(16)} /${p.slug}`);
-  console.log("\nOdkazy k rozeslání najdeš i v /admin.");
+  console.log("\nPáry a domácnosti (řádky s „+“) si navzájem losovat nebudou.");
   process.exit(0);
 }
 
