@@ -60,7 +60,7 @@ export default async function Home() {
           {chybaDatabaze ? (
             <section className="rounded-3xl border-4 border-gold/70 bg-night/85 p-6 backdrop-blur-md">
               <div className="text-5xl">😕</div>
-              <p className="mt-3 text-xl font-bold">Hra se teď nenačte.</p>
+              <p className="mt-3 text-xl font-bold">Losování se teď nenačte.</p>
               <p className="mt-2 text-cream/80">
                 Zkus to prosím za chvíli, nebo se ozvi organizátorovi.
               </p>

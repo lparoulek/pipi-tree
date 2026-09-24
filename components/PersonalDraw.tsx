@@ -51,7 +51,7 @@ export default function PersonalDraw({
         setPhase("blocked");
         return;
       case "not-ready":
-        setMessage("Hra ještě není připravená — organizátor zatím nezadal seznam lidí.");
+        setMessage("Losování ještě není připravené — organizátor zatím nezadal seznam lidí.");
         setPhase("blocked");
         return;
       case "unknown-person":

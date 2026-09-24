@@ -222,7 +222,7 @@ export async function replaceParticipants(
     if (started.length > 0) {
       return {
         ok: false,
-        detail: "Už se losuje — seznam se měnit nedá. Nejdřív hru resetuj.",
+        detail: "Už se losuje — seznam se měnit nedá. Nejdřív losování resetuj.",
       };
     }
 

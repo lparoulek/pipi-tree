@@ -39,7 +39,7 @@ export default function AdminPanel({
 
   return (
     <div className="space-y-5">
-      <Card title="Stav hry">
+      <Card title="Stav losování">
         <p className="text-2xl font-extrabold">
           <span className="text-gold">{progress.drawn}</span> z{" "}
           <span className="text-gold">{progress.total}</span> už losovalo
@@ -60,8 +60,8 @@ export default function AdminPanel({
         {locked ? (
           <>
             <p className="text-cream/85">
-              Už se losuje, takže seznam je zamčený. Změna jmen uprostřed hry by
-              rozbila párování — nejdřív hru resetuj.
+              Už se losuje, takže seznam je zamčený. Změna jmen uprostřed losování by
+              rozbila párování — nejdřív losování resetuj.
             </p>
             <ul className="mt-3 grid grid-cols-2 gap-1 text-cream/90">
               {names.map((name) => (
@@ -93,9 +93,9 @@ export default function AdminPanel({
         <Result state={saveState} />
       </Card>
 
-      <Card title="Reset hry">
+      <Card title="Reset losování">
         <p className="text-cream/85">
-          Smaže <strong>všechny losy</strong> a hra začne od nuly. Seznam lidí
+          Smaže <strong>všechny losy</strong> a losování začne od nuly. Seznam lidí
           zůstane. Vrátit to zpátky nejde.
         </p>
         <form action={reset} className="mt-3 flex flex-wrap items-center gap-3">
