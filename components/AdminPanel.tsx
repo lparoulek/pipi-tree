@@ -15,19 +15,15 @@ import CandyButton from "@/components/CandyButton";
  * dozvědět, kdo koho má — jinak by o překvapení přišel taky. Vidí jen počty.
  */
 export default function AdminPanel({
-  people,
-  origin,
+  names,
   progress,
   locked,
 }: {
-  people: { name: string; slug: string }[];
-  /** Základ adresy pro osobní odkazy, např. `https://pipi-tree.vercel.app`. */
-  origin: string;
+  names: string[];
   progress: { total: number; drawn: number };
   /** Už se losuje → seznam se nesmí měnit, jinak by se párování rozpadlo. */
   locked: boolean;
 }) {
-  const names = people.map((p) => p.name);
   const [saveState, save, saving] = useActionState<AdminState, FormData>(
     saveParticipantsAction,
     null,
@@ -53,8 +49,6 @@ export default function AdminPanel({
           </p>
         )}
       </Card>
-
-      {people.length > 0 && <Links people={people} origin={origin} />}
 
       <Card title="Seznam lidí">
         {locked ? (
@@ -136,71 +130,6 @@ function SeznamForm({
         {saving ? "Ukládám…" : "Uložit seznam"}
       </CandyButton>
     </form>
-  );
-}
-
-/**
- * Osobní odkazy k rozeslání. Odkaz je odvozený ze jména, takže je krátký a dá
- * se nadiktovat po telefonu — a zároveň uhodnutelný, což je vědomá volba
- * (viz README). Každému pošli **jen ten jeho**.
- */
-function Links({
-  people,
-  origin,
-}: {
-  people: { name: string; slug: string }[];
-  origin: string;
-}) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copy = async (label: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(label);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // Clipboard API bez HTTPS nebo bez oprávnění — odkaz jde vždy označit myší.
-      setCopied(null);
-    }
-  };
-
-  const all = people.map((p) => `${p.name}: ${origin}/${p.slug}`).join("\n");
-
-  return (
-    <Card title="Osobní odkazy">
-      <p className="text-sm text-cream/80">
-        Každému pošli <strong>jen jeho vlastní</strong> odkaz. Kdo si ho uloží,
-        vrátí se ke svému losu z jakéhokoli zařízení.
-      </p>
-
-      <ul className="mt-3 space-y-2">
-        {people.map((p) => (
-          <li
-            key={p.slug}
-            className="flex items-center justify-between gap-2 rounded-xl bg-night/60 px-3 py-2"
-          >
-            <span className="min-w-0">
-              <span className="font-bold">{p.name}</span>
-              <span className="block truncate text-sm text-frost">
-                {origin}/{p.slug}
-              </span>
-            </span>
-            <button
-              onClick={() => copy(p.slug, `${origin}/${p.slug}`)}
-              className="btn btn-gold shrink-0 px-3 py-1 text-sm"
-            >
-              {copied === p.slug ? "zkopírováno ✓" : "kopírovat"}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-3">
-        <CandyButton tone="plum" onClick={() => copy("__all__", all)}>
-          {copied === "__all__" ? "Zkopírováno ✓" : "Kopírovat všechny"}
-        </CandyButton>
-      </div>
-    </Card>
   );
 }
 

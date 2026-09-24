@@ -21,8 +21,9 @@ Název události, datum a cena dárku jsou pohromadě v konstantách v
 [`lib/game/countdown.ts`](lib/game/countdown.ts) — na další rok se mění
 jen tam.
 
-Kdo chce, může místo toho použít **osobní odkaz** („Jan Novák“ → `/jannovak`);
-`/admin` je vygeneruje k rozeslání. Na přesný tvar si vzpomínat nemusí —
+Kdo chce, může místo toho použít **osobní odkaz** („Jan Novák“ → `/jannovak`).
+Je odvozený ze jména, takže ho administrace nevypisuje — kdo ho potřebuje,
+složí si ho sám (seznam i s odkazy ukáže `npm run stav`). Na přesný tvar si vzpomínat nemusí —
 `/Jan-Novák`, `/JanNovak` i `/jan_novak` skončí přesměrováním na `/jannovak`.
 Odkaz zůstává platný, takže se k losu dá vrátit kdykoli a odkudkoli.
 

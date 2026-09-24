@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import AdminPanel from "@/components/AdminPanel";
 import { isDatabaseConfigured } from "@/lib/db/client";
@@ -28,27 +27,20 @@ export default async function AdminPage() {
   // JSX se staví až za try/catch — chyby při renderu by se do něj nezachytily
   // (a ESLint na to správně upozorňuje). Tady hlídáme jen dotazy do databáze.
   let data: {
-    people: { name: string; slug: string }[];
-    origin: string;
+    names: string[];
     stats: { total: number; drawn: number };
     locked: boolean;
   };
 
   try {
-    const [people, stats, started, head] = await Promise.all([
+    const [people, stats, started] = await Promise.all([
       listParticipants(),
       progress(),
       hasAnyDraw(),
-      headers(),
     ]);
 
-    // Odkazy se skládají z hostitele požadavku, ať fungují lokálně i na Vercelu.
-    const host = head.get("host") ?? "localhost:3000";
-    const proto = head.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-
     data = {
-      people: people.map((p) => ({ name: p.name, slug: p.slug })),
-      origin: `${proto}://${host}`,
+      names: people.map((p) => p.name),
       stats,
       locked: started,
     };
@@ -67,8 +59,7 @@ export default async function AdminPage() {
   return (
     <Shell>
       <AdminPanel
-        people={data.people}
-        origin={data.origin}
+        names={data.names}
         progress={data.stats}
         locked={data.locked}
       />
