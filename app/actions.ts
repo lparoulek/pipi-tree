@@ -1,5 +1,6 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { z } from "zod";
 import { isAdmin } from "@/lib/admin";
 import {
@@ -72,7 +73,12 @@ export async function saveParticipantsAction(
   if (!raw.success) return { ok: false, detail: "Seznam je moc dlouhý." };
 
   try {
-    return await replaceParticipants(raw.data.split("\n"));
+    const result = await replaceParticipants(raw.data.split("\n"));
+    // Bez tohohle by administrace dál ukazovala seznam z doby před uložením
+    // a formulář by se po odeslání vyprázdnil. `drawAction` to schválně nedělá:
+    // přerender po losu by zabil animaci mlýnku.
+    if (result.ok) refresh();
+    return result;
   } catch (error) {
     console.error("[admin] uložení seznamu selhalo", error);
     return { ok: false, detail: "Uložení selhalo — zkontroluj připojení k databázi." };
@@ -92,6 +98,7 @@ export async function resetDrawsAction(
 
   try {
     await resetDraws();
+    refresh();
     return { ok: true, detail: "Všechny losy smazány. Můžete losovat znovu." };
   } catch (error) {
     console.error("[admin] reset selhal", error);

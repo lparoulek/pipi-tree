@@ -70,25 +70,7 @@ export default function AdminPanel({
             </ul>
           </>
         ) : (
-          <form action={save} className="space-y-3">
-            <label htmlFor="names" className="block text-sm text-cream/80">
-              Jedno jméno na řádek, aspoň dva lidi. Piš <strong>jméno
-              i příjmení</strong> — v losu se zobrazí přesně to, co tu zadáš,
-              a podle samotného „Petra“ obdarovaný nepozná, o koho jde.
-            </label>
-            <textarea
-              id="names"
-              name="names"
-              rows={10}
-              defaultValue={names.join("\n")}
-              placeholder={"Jana\nPetr\nŠtěpán\nŽofie"}
-              className="w-full rounded-xl border-2 border-gold/60 bg-night/70 p-3 font-mono text-cream
-                placeholder:text-cream/40 focus:border-gold focus:outline-none"
-            />
-            <CandyButton tone="pine" type="submit" disabled={saving}>
-              {saving ? "Ukládám…" : "Uložit seznam"}
-            </CandyButton>
-          </form>
+          <SeznamForm key={names.join("\n")} names={names} save={save} saving={saving} />
         )}
         <Result state={saveState} />
       </Card>
@@ -113,6 +95,47 @@ export default function AdminPanel({
         <Result state={resetState} />
       </Card>
     </div>
+  );
+}
+
+/**
+ * Formulář se seznamem. Text drží ve vlastním stavu: React po odeslání
+ * formuláře nekontrolovaná pole vrací na `defaultValue`, takže při chybě
+ * (třeba dvě stejná jména) by zmizelo všechno napsané. Po úspěšném uložení
+ * se formulář přes `key` založí znovu s uloženým, očištěným seznamem.
+ */
+function SeznamForm({
+  names,
+  save,
+  saving,
+}: {
+  names: string[];
+  save: (formData: FormData) => void;
+  saving: boolean;
+}) {
+  const [text, setText] = useState(names.join("\n"));
+
+  return (
+    <form action={save} className="space-y-3">
+      <label htmlFor="names" className="block text-sm text-cream/80">
+        Jedno jméno na řádek, aspoň dva lidi. Piš <strong>jméno
+        i příjmení</strong> — v losu se zobrazí přesně to, co tu zadáš,
+        a podle samotného „Petra“ obdarovaný nepozná, o koho jde.
+      </label>
+      <textarea
+        id="names"
+        name="names"
+        rows={10}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={"Jana\nPetr\nŠtěpán\nŽofie"}
+        className="w-full rounded-xl border-2 border-gold/60 bg-night/70 p-3 font-mono text-cream
+          placeholder:text-cream/40 focus:border-gold focus:outline-none"
+      />
+      <CandyButton tone="pine" type="submit" disabled={saving}>
+        {saving ? "Ukládám…" : "Uložit seznam"}
+      </CandyButton>
+    </form>
   );
 }
 
